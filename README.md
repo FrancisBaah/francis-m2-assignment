@@ -41,11 +41,11 @@ This application is a simplified multi-page web app that tracks and displays rea
    ```
 4. Start the application:
    ```bash
-   npm run de
+   npm run dev
    ```
 5. Run tests:
    ```bash
-   npm test:ui
+   npm run test:ui
    ```
 
 ### Architectural Decisions
