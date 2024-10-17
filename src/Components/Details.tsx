@@ -53,15 +53,17 @@ const Details = () => {
   });
 
   // Function to connect to the WebSocket for real-time price updates
+  let retryAttempts = 0;
+  const maxRetries = 10;
+
   const connectWebSocket = () => {
     const newSocket = new WebSocket("wss://ws-feed.exchange.coinbase.com");
 
-    // WebSocket event listeners
     newSocket.onopen = () => {
       setSocketOpen(true);
-      console.log("opened");
+      retryAttempts = 0; // Reset retry attempts on successful connection
+      console.log("WebSocket opened");
 
-      // Subscribe to the 'ticker' channel for real-time price updates
       const subscribeMessage = {
         type: "subscribe",
         product_ids: [id],
@@ -70,34 +72,33 @@ const Details = () => {
       newSocket.send(JSON.stringify(subscribeMessage));
     };
 
-    // Handle incoming WebSocket messages
     newSocket.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data);
-        console.log("message", message);
-
         if (message.type === "ticker") {
           setFeedData(message);
-          setLoading(false); // Set loading to false after receiving the first message
+          setLoading(false);
         }
       } catch (error) {
-        console.error("Error parsing message:", error);
         setError("Error processing incoming data");
       }
     };
 
-    // Handle WebSocket errors
-    newSocket.onerror = (event) => {
-      console.error("WebSocket error:", event);
+    newSocket.onerror = () => {
       setError("WebSocket connection error");
     };
 
-    // Handle WebSocket closure and attempt reconnection
     newSocket.onclose = () => {
-      console.log("WebSocket connection closed");
-      setSocketOpen(false); // Update connection status
+      setSocketOpen(false);
       setError("WebSocket connection closed. Attempting to reconnect...");
-      setTimeout(connectWebSocket, 3000); // Reconnect after 3 seconds
+
+      if (retryAttempts < maxRetries) {
+        const retryDelay = Math.min(1000 * Math.pow(2, retryAttempts), 30000); // Exponential backoff
+        retryAttempts += 1;
+        setTimeout(connectWebSocket, retryDelay);
+      } else {
+        console.error("Max retries reached. WebSocket not reconnecting.");
+      }
     };
 
     return () => {
@@ -112,16 +113,11 @@ const Details = () => {
         `https://api.coinbase.com/v2/prices/${id}/historic?period=month`
       );
 
-      const prices = response.data.data.prices;
+      const prices = response?.data?.data?.prices;
       // Check if the expected historical price data is available
       if (!prices || prices.length === 0) {
         setError("No historical data available.");
         return;
-      }
-      if (!Array.isArray(prices)) {
-        setLoading(false);
-        setError("No historical data available.");
-        return; // Exit if there's no data
       }
 
       // Process historical data for the chart
