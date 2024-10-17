@@ -29,7 +29,7 @@ This application is a simplified multi-page web app that tracks and displays rea
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/FrancisBaah/francis-m2-assignment
    ```
 2. Navigate to the project directory:
    ```bash
